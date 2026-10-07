@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
         return redirect;
     };
 
-    const isProtected = ["/members", "/profile", "/onboarding"].some((p) =>
+    const isProtected = ["/members", "/profile", "/onboarding", "/enter", "/vote"].some((p) =>
         path.startsWith(p)
     );
 

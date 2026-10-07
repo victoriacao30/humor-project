@@ -23,6 +23,7 @@ export default async function Header() {
             <Link href="/" className="logo">☁ Humor Project</Link>
             {user ? (
                 <nav className="topbar-nav">
+                    <Link href="/vote" className="btn btn-sm">Vote</Link>
                     <Link href="/members" className="btn btn-sm">Members</Link>
                     <Link href="/profile" className="btn btn-sm">Profile</Link>
                     {avatarUrl && <img src={avatarUrl} alt="" className="avatar" />}
