@@ -8,7 +8,10 @@ export function SignInButton() {
             onClick={() =>
                 createClient().auth.signInWithOAuth({
                     provider: "google",
-                    options: { redirectTo: `${window.location.origin}/auth/callback` },
+                    options: {
+                        redirectTo: `${window.location.origin}/auth/callback`,
+                        queryParams: { prompt: "select_account" },
+                    },
                 })
             }
         >
