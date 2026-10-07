@@ -91,7 +91,7 @@ export default function Profile() {
                 )}
                 <label className="border rounded px-3 py-1 cursor-pointer">
                     Upload photo
-                    <input type="file" accept="image/*" onChange={uploadPhoto} className="hidden" />
+                    <input type="file" accept="   image/png, image/jpeg, image/webp, image/gif" onChange={uploadPhoto} className="hidden" />
                 </label>
             </div>
 
