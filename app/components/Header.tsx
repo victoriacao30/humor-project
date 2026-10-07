@@ -19,17 +19,13 @@ export default async function Header() {
     }
 
     return (
-        <header className="flex items-center justify-between p-4 border-b">
-            <Link href="/" className="font-bold">
-                Humor Project
-            </Link>
+        <header className="topbar">
+            <Link href="/" className="logo">☁ Humor Project</Link>
             {user ? (
-                <nav className="flex items-center gap-4">
-                    <Link href="/members">Members</Link>
-                    <Link href="/profile">Profile</Link>
-                    {avatarUrl && (
-                        <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
-                    )}
+                <nav className="topbar-nav">
+                    <Link href="/members" className="btn btn-sm">Members</Link>
+                    <Link href="/profile" className="btn btn-sm">Profile</Link>
+                    {avatarUrl && <img src={avatarUrl} alt="" className="avatar" />}
                     <SignOutButton />
                 </nav>
             ) : (
@@ -38,3 +34,4 @@ export default async function Header() {
         </header>
     );
 }
+

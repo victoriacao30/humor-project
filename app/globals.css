@@ -1,26 +1,182 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --ink: #1f1d1a;
+  --paper: #ebe5d9;
+  --cream: #fffdf7;
+  --peri: #a9b8f0;
+  --peri-dark: #5d73c9;
+  --sky-top: #9dbdee;
+  --sky-bottom: #e6effb;
+  --wobble: 20px 24px 22px 26px / 24px 20px 26px 22px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: var(--font-hand), sans-serif;
+  font-size: 20px;
+  background:
+          radial-gradient(90px 42px at 12% 20%, rgba(255, 255, 255, 0.95) 98%, transparent 100%),
+          radial-gradient(60px 48px at 16% 15%, rgba(255, 255, 255, 0.95) 98%, transparent 100%),
+          radial-gradient(120px 38px at 14% 24%, rgba(255, 255, 255, 0.95) 98%, transparent 100%),
+          radial-gradient(100px 40px at 82% 38%, rgba(255, 255, 255, 0.9) 98%, transparent 100%),
+          radial-gradient(70px 46px at 86% 33%, rgba(255, 255, 255, 0.9) 98%, transparent 100%),
+          radial-gradient(130px 36px at 84% 42%, rgba(255, 255, 255, 0.9) 98%, transparent 100%),
+          radial-gradient(80px 34px at 40% 85%, rgba(255, 255, 255, 0.85) 98%, transparent 100%),
+          radial-gradient(110px 30px at 44% 88%, rgba(255, 255, 255, 0.85) 98%, transparent 100%),
+          linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
+  background-attachment: fixed;
 }
+
+.display { font-family: var(--font-display), sans-serif; }
+
+.page { max-width: 900px; margin: 24px auto 64px; padding: 0 16px; }
+.narrow { max-width: 540px; margin: 0 auto; }
+
+.topbar {
+  max-width: 900px;
+  margin: 16px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: var(--cream);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 4px 5px 0 var(--ink);
+}
+@media (max-width: 932px) { .topbar { margin: 16px 16px 0; } }
+.logo { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 22px; text-transform: uppercase; letter-spacing: 0.04em; }
+.topbar-nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 3px solid var(--ink); }
+
+.window {
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: var(--wobble);
+  box-shadow: 7px 8px 0 var(--ink);
+  overflow: hidden;
+}
+.window-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 3px solid var(--ink);
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1;
+}
+.url {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--cream);
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.url span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) { .hide-sm { display: none; } }
+.window-body { padding: 28px; }
+@media (max-width: 600px) { .window-body { padding: 20px; } }
+
+.label {
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.title { font-size: 30px; margin-bottom: 18px; }
+.hint { margin: -8px 0 18px; opacity: 0.75; }
+
+.field {
+  width: 100%;
+  background: var(--cream);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-family: var(--font-display), sans-serif;
+  font-size: 20px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 3px 4px 0 var(--ink);
+  outline: none;
+}
+.field:focus { background: #fff; box-shadow: 3px 4px 0 var(--peri-dark); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--cream);
+  border: 3px solid var(--ink);
+  border-radius: 16px 19px 15px 20px;
+  padding: 7px 18px;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
+  font-size: 17px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 3px 4px 0 var(--ink);
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s, background 0.15s;
+}
+.btn:hover { background: var(--peri); }
+.btn:active { transform: translate(3px, 4px); box-shadow: 0 0 0 var(--ink); }
+.btn-primary { background: var(--peri); }
+.btn-primary:hover { background: var(--peri-dark); color: #fff; }
+.btn-sm { padding: 5px 14px; font-size: 15px; }
+
+.frame {
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 18px 22px 20px 24px / 22px 18px 24px 20px;
+  box-shadow: 4px 5px 0 var(--ink);
+}
+
+.stack { display: flex; flex-direction: column; gap: 18px; }
+.joke { padding: 16px 20px; }
+.joke-setup { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 20px; }
+.joke-punch { font-size: 21px; color: var(--peri-dark); margin-top: 4px; }
+
+.form { display: flex; flex-direction: column; gap: 18px; }
+.error { color: #c2412d; font-family: var(--font-display), sans-serif; }
+.status { font-family: var(--font-display), sans-serif; color: var(--peri-dark); }
+
+.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+@media (max-width: 700px) { .profile-grid { grid-template-columns: 1fr; } }
+.photo-col { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.photo { width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.photo img { width: 100%; height: 100%; object-fit: cover; }
+.photo-empty { font-family: var(--font-display), sans-serif; font-weight: 800; text-transform: uppercase; opacity: 0.5; }
+
+.logo,
+.window-bar,
+.label,
+.field,
+.btn,
+.joke-setup,
+.photo-empty {
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+.label { font-size: 24px; }
+.title { font-size: 34px; }
+.joke-setup { font-size: 22px; }
+
+

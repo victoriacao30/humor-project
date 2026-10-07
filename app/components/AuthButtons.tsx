@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase-browser";
 export function SignInButton() {
     return (
         <button
-            className="border rounded px-3 py-1"
+            className="btn btn-primary btn-sm"
             onClick={() =>
                 createClient().auth.signInWithOAuth({
                     provider: "google",
@@ -20,7 +20,7 @@ export function SignInButton() {
 export function SignOutButton() {
     return (
         <button
-            className="border rounded px-3 py-1"
+            className="btn btn-sm"
             onClick={async () => {
                 await createClient().auth.signOut();
                 window.location.href = "/";

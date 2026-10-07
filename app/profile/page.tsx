@@ -2,6 +2,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
+import Window from "@/app/components/Window";
 
 export default function Profile() {
     const router = useRouter();
@@ -45,7 +46,7 @@ export default function Profile() {
             .from("profiles")
             .update({ first_name: firstName.trim(), last_name: lastName.trim() })
             .eq("id", userId);
-        setStatus(error ? error.message : "Saved");
+        setStatus(error ? error.message : "Saved!");
     }
 
     async function uploadPhoto(e: ChangeEvent<HTMLInputElement>) {
@@ -55,9 +56,7 @@ export default function Profile() {
 
         const ext = file.name.split(".").pop();
         const path = `${userId}/${Date.now()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-            .from("avatars")
-            .upload(path, file);
+        const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file);
         if (uploadError) {
             setStatus(uploadError.message);
             return;
@@ -73,55 +72,50 @@ export default function Profile() {
             return;
         }
         setAvatarUrl(data.publicUrl);
-        setStatus("Photo updated");
+        setStatus("Photo updated!");
         router.refresh();
     }
 
     return (
-        <main className="p-6 max-w-sm">
-            <h1 className="text-xl font-bold mb-4">Your profile</h1>
+        <Window url="www.humorproject.com/profile">
+            <div className="profile-grid">
+                <form onSubmit={saveNames} className="form">
+                    <h1 className="label title">About me:</h1>
+                    <label>
+                        <span className="label">First name:</span>
+                        <input className="field" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                    </label>
+                    <label>
+                        <span className="label">Last name:</span>
+                        <input className="field" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                    </label>
+                    <button className="btn btn-primary">Save changes</button>
+                    {status && <p className="status">{status}</p>}
+                    {registeredAt && (
+                        <p className="hint">Member since {new Date(registeredAt).toLocaleDateString()}</p>
+                    )}
+                </form>
 
-            <div className="flex items-center gap-4 mb-6">
-                {avatarUrl ? (
-                    <img src={avatarUrl} alt="Profile photo" className="w-20 h-20 rounded-full object-cover" />
-                ) : (
-                    <div className="w-20 h-20 rounded-full border flex items-center justify-center opacity-60">
-                        No photo
+                <div className="photo-col">
+                    <div className="frame photo">
+                        {avatarUrl ? (
+                            <img src={avatarUrl} alt="Profile photo" />
+                        ) : (
+                            <span className="photo-empty">No photo yet</span>
+                        )}
                     </div>
-                )}
-                <label className="border rounded px-3 py-1 cursor-pointer">
-                    Upload photo
-                    <input type="file" accept="   image/png, image/jpeg, image/webp, image/gif" onChange={uploadPhoto} className="hidden" />
-                </label>
+                    <label className="btn">
+                        Upload photo
+                        <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/webp, image/gif"
+                            onChange={uploadPhoto}
+                            hidden
+                        />
+                    </label>
+                </div>
             </div>
-
-            <form onSubmit={saveNames} className="flex flex-col gap-3">
-                <label>
-                    First name
-                    <input
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        className="border rounded px-2 py-1 bg-transparent w-full"
-                    />
-                </label>
-                <label>
-                    Last name
-                    <input
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        className="border rounded px-2 py-1 bg-transparent w-full"
-                    />
-                </label>
-                <button className="border rounded px-3 py-1">Save changes</button>
-            </form>
-
-            {status && <p className="mt-3">{status}</p>}
-            {registeredAt && (
-                <p className="mt-6 opacity-60 text-sm">
-                    Member since {new Date(registeredAt).toLocaleDateString()}
-                </p>
-            )}
-        </main>
+        </Window>
     );
 }
 

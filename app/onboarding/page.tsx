@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase-browser";
+import Window from "@/app/components/Window";
 
 export default function Onboarding() {
     const [firstName, setFirstName] = useState("");
@@ -31,25 +32,22 @@ export default function Onboarding() {
     }
 
     return (
-        <main className="p-6 max-w-sm">
-            <h1 className="text-xl font-bold mb-1">Welcome! What&apos;s your name?</h1>
-            <p className="mb-4 opacity-70">You&apos;ll need this before using the site.</p>
-            <form onSubmit={save} className="flex flex-col gap-3">
-                <input
-                    placeholder="First name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="border rounded px-2 py-1 bg-transparent"
-                />
-                <input
-                    placeholder="Last name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="border rounded px-2 py-1 bg-transparent"
-                />
-                {error && <p className="text-red-500">{error}</p>}
-                <button className="border rounded px-3 py-1">Continue</button>
+        <Window url="www.humorproject.com/hello" className="narrow">
+            <h1 className="label title">Welcome! Who are you?</h1>
+            <p className="hint">You&apos;ll need a name before exploring the site.</p>
+            <form onSubmit={save} className="form">
+                <label>
+                    <span className="label">First name:</span>
+                    <input className="field" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                </label>
+                <label>
+                    <span className="label">Last name:</span>
+                    <input className="field" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                </label>
+                {error && <p className="error">{error}</p>}
+                <button className="btn btn-primary">Continue →</button>
             </form>
-        </main>
+        </Window>
     );
 }
+

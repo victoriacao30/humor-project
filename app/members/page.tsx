@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
+import Window from "@/app/components/Window";
 
 export default async function Members() {
     const supabase = await createClient();
@@ -15,10 +16,10 @@ export default async function Members() {
         .single();
 
     return (
-        <main className="p-6">
-            <h1 className="text-xl font-bold mb-2">Members only</h1>
+        <Window url="www.humorproject.com/members-only" className="narrow">
+            <h1 className="label title">Members only ★</h1>
             <p>Hi {profile?.first_name}! Only signed-in users can see this page.</p>
-        </main>
+        </Window>
     );
 }
 
