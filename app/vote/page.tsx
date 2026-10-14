@@ -2,10 +2,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
-import { getToday } from "@/lib/battle";
+import { getToday, isLate } from "@/lib/battle";
 import Window from "@/app/components/Window";
+import PostCard from "@/app/components/PostCard";
 
-type Entry = { id: number; image_url: string; caption: string };
+type Entry = { id: number; image_url: string; selfie_url: string; caption: string; created_at: string };
 
 function pairKey(a: number, b: number) {
     return a < b ? `${a}-${b}` : `${b}-${a}`;
@@ -13,7 +14,7 @@ function pairKey(a: number, b: number) {
 
 export default function Vote() {
     const [supabase] = useState(() => createClient());
-    const [{ date, prompt }] = useState(getToday);
+    const [{ date, prompt, dropAt }] = useState(getToday);
     const [userId, setUserId] = useState<string | null>(null);
     const [entries, setEntries] = useState<Entry[]>([]);
     const [seen, setSeen] = useState<Set<string>>(new Set());
@@ -21,6 +22,7 @@ export default function Vote() {
     const [loading, setLoading] = useState(true);
     const [hasEntry, setHasEntry] = useState(false);
     const [error, setError] = useState("");
+    const notYet = Date.now() < dropAt;
 
     const pickPair = useCallback((list: Entry[], seenPairs: Set<string>) => {
         const options: [Entry, Entry][] = [];
@@ -53,7 +55,11 @@ export default function Vote() {
             }
             setHasEntry(true);
             const [{ data: entryRows }, { data: voteRows }] = await Promise.all([
-                supabase.from("entries").select("id, image_url, caption").eq("battle_date", date).neq("user_id", user.id),
+                supabase
+                    .from("entries")
+                    .select("id, image_url, selfie_url, caption, created_at")
+                    .eq("battle_date", date)
+                    .neq("user_id", user.id),
                 supabase.from("votes").select("winner_id, loser_id").eq("voter_id", user.id).eq("battle_date", date),
             ]);
             const list = entryRows ?? [];
@@ -86,20 +92,25 @@ export default function Vote() {
 
     return (
         <Window url="www.humorproject.com/vote">
-            <p className="label">Today&apos;s prompt:</p>
+            <p className="label">Today&apos;s drop:</p>
             <h1 className="prompt-text">{prompt}</h1>
 
-            {loading ? (
+            {notYet ? (
+                <div className="form">
+                    <p>Today&apos;s drop hasn&apos;t happened yet. Voting opens once people start posting 👀</p>
+                    <Link href="/" className="btn">← Back</Link>
+                </div>
+            ) : loading ? (
                 <p className="status">Loading matchups…</p>
             ) : !hasEntry ? (
                 <div className="form">
-                    <p>Enter today&apos;s battle first! Upload your photo, then come back to judge everyone else&apos;s.</p>
-                    <Link href="/enter" className="btn btn-primary">Enter the battle →</Link>
+                    <p>Post today first! Share your song + selfie, then come back to judge everyone else.</p>
+                    <Link href="/enter" className="btn btn-primary">Post now →</Link>
                 </div>
             ) : entries.length < 2 ? (
                 <div className="form">
-                    <p>Not enough entries yet! Voting opens once at least 2 other people enter. Invite your friends.</p>
-                    <Link href="/" className="btn">← Back to battle</Link>
+                    <p>Not enough posts yet! Voting opens once at least 2 other people post. Invite your friends.</p>
+                    <Link href="/" className="btn">← Back</Link>
                 </div>
             ) : !pair ? (
                 <div className="form">
@@ -108,16 +119,24 @@ export default function Vote() {
                 </div>
             ) : (
                 <>
-                    <p className="hint">Which one is funnier? Tap it. ({seen.size} judged so far)</p>
+                    <p className="hint">Which post wins? Tap it. ({seen.size} judged so far)</p>
                     <div className="versus">
                         <button className="frame vs-card" onClick={() => choose(pair[0], pair[1])}>
-                            <img src={pair[0].image_url} alt="" />
-                            <p className="caption-text">{pair[0].caption}</p>
+                            <PostCard
+                                screenshot={pair[0].image_url}
+                                selfie={pair[0].selfie_url}
+                                caption={pair[0].caption}
+                                late={isLate(pair[0].created_at, date)}
+                            />
                         </button>
                         <span className="vs-badge">VS</span>
                         <button className="frame vs-card" onClick={() => choose(pair[1], pair[0])}>
-                            <img src={pair[1].image_url} alt="" />
-                            <p className="caption-text">{pair[1].caption}</p>
+                            <PostCard
+                                screenshot={pair[1].image_url}
+                                selfie={pair[1].selfie_url}
+                                caption={pair[1].caption}
+                                late={isLate(pair[1].created_at, date)}
+                            />
                         </button>
                     </div>
                     {error && <p className="error">{error}</p>}

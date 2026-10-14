@@ -281,7 +281,149 @@ body {
   box-shadow: 3px 4px 0 var(--ink);
 }
 
+.post { display: flex; flex-direction: column; gap: 10px; }
+.post-media { position: relative; }
+.post .post-main {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border: 3px solid var(--ink);
+  border-radius: 14px 17px 15px 18px;
+  background: var(--cream);
+}
+.post .post-selfie {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 34%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 3px 4px 0 var(--ink);
+}
+.late-tag {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 14px;
+  background: #ffd6cc;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 0 10px;
+}
+.post-sm .post-media { width: 72px; }
+.post-sm .post-main { border-width: 2px; border-radius: 10px; }
+.post-sm .post-selfie { top: 4px; left: 4px; width: 42%; border-width: 2px; border-radius: 6px; box-shadow: none; }
+.post-sm .late-tag { font-size: 9px; padding: 0 4px; bottom: 3px; right: 3px; }
 
+.drop {
+  margin: 16px 0 4px;
+  padding: 14px 18px;
+  background: var(--cream);
+  border: 3px dashed var(--ink);
+  border-radius: 16px 19px 15px 20px;
+}
+.drop-live {
+  border-style: solid;
+  background: var(--peri);
+  box-shadow: 3px 4px 0 var(--ink);
+  animation: drop-pulse 1.6s ease-in-out infinite;
+}
+@keyframes drop-pulse { 50% { transform: scale(1.015); } }
+
+.upload-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.upload-slot {
+  aspect-ratio: 4 / 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-align: center;
+  padding: 6px;
+}
+.upload-slot img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.cal-title { margin: 0; text-align: center; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.cal-dow { text-align: center; font-family: var(--font-display), sans-serif; letter-spacing: 0.1em; font-size: 15px; opacity: 0.6; }
+.cal-day {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cream);
+  border: 2.5px solid var(--ink);
+  border-radius: 12px 14px 12px 15px;
+  font-family: var(--font-display), sans-serif;
+  font-size: 18px;
+}
+.cal-day img { width: 100%; height: 100%; object-fit: cover; border-radius: 9px; }
+.cal-today { box-shadow: 0 0 0 3px var(--peri-dark); }
+.cal-crown { position: absolute; top: -14px; right: -8px; font-size: 22px; transform: rotate(15deg); }
+.cal-stats { margin-top: 16px; }
+
+.upload-slot {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.15s;
+}
+.upload-slot:hover { background: #f4f6ff; transform: rotate(-0.5deg) scale(1.01); }
+.upload-slot:active { transform: scale(0.98); }
+.slot-plus { display: block; font-size: 48px; line-height: 1; margin-bottom: 8px; }
+.slot-change {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 14px;
+  background: var(--cream);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 2px 12px;
+}
+
+.cal-day-btn { padding: 0; cursor: pointer; transition: transform 0.1s; }
+.cal-day-btn:hover { transform: rotate(-2deg) scale(1.05); }
+.cal-selected { box-shadow: 0 0 0 3px var(--ink), 3px 4px 0 3px var(--peri-dark); }
+
+.cal-detail {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 3px dashed var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pair-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.pair-photos img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border: 3px solid var(--ink);
+  border-radius: 14px 17px 15px 18px;
+  box-shadow: 3px 4px 0 var(--ink);
+  background: var(--cream);
+}
+.cal-winner { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+.win-banner {
+  align-self: flex-start;
+  background: var(--peri);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  padding: 4px 16px;
+  box-shadow: 3px 4px 0 var(--ink);
+}
 
 
 

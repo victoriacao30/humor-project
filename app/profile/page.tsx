@@ -3,6 +3,7 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Window from "@/app/components/Window";
+import PostCalendar from "@/app/components/PostCalendar";
 
 export default function Profile() {
     const router = useRouter();
@@ -77,7 +78,8 @@ export default function Profile() {
     }
 
     return (
-        <Window url="www.humorproject.com/profile">
+        <div className="stack">
+            <Window url="www.humorproject.com/profile">
             <div className="profile-grid">
                 <form onSubmit={saveNames} className="form">
                     <h1 className="label title">About me:</h1>
@@ -115,7 +117,9 @@ export default function Profile() {
                     </label>
                 </div>
             </div>
-        </Window>
+            </Window>
+            {userId && <PostCalendar userId={userId} />}
+        </div>
     );
 }
 
