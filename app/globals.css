@@ -507,4 +507,23 @@ body {
 .caption-link:hover { color: var(--peri-dark); }
 .share-hint { margin: 20px 0 0; }
 
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+@media (max-width: 600px) { .stat-grid { grid-template-columns: 1fr; } }
+.stat-tile { padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; }
+.stat-num {
+  font-family: var(--font-display), sans-serif;
+  font-size: 36px;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  color: var(--peri-dark);
+}
+.stat-small { font-size: 22px; overflow-wrap: anywhere; }
+.stat-label { font-family: var(--font-display), sans-serif; text-transform: uppercase; letter-spacing: 0.1em; font-size: 14px; opacity: 0.7; }
+
+.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 8px 0 22px; }
+.week-day { display: flex; flex-direction: column; gap: 6px; }
+
+.wrapped-vibe { align-self: flex-start; font-size: 16px; padding: 2px 14px; }
+
+
 
