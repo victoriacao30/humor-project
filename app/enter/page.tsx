@@ -1,37 +1,41 @@
 "use client";
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import { getToday } from "@/lib/battle";
 import Window from "@/app/components/Window";
 import PostCard from "@/app/components/PostCard";
+import SnippetButton from "@/app/components/SnippetButton";
 
-type Upload = { path: string; url: string };
+type Song = { id: number; title: string; artist: string; cover: string; preview: string | null };
+type Meme = { url: string; templateId: string };
+type Posted = {
+    meme_url: string;
+    image_url: string;
+    caption: string;
+    song_title: string;
+    song_artist: string;
+    song_preview: string | null;
+    snippet_start: number;
+};
 
-// Shrinks a photo to max 1080px and saves it as a JPEG, so uploads and AI captions are fast.
-async function shrink(file: File, maxSize = 1080): Promise<Blob> {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    return new Promise((resolve, reject) =>
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Couldn't process photo"))), "image/jpeg", 0.85)
-    );
-}
+const time = (s: number) => `0:${String(s).padStart(2, "0")}`;
 
 export default function Enter() {
     const [supabase] = useState(() => createClient());
     const [{ date, prompt, dropAt }] = useState(getToday);
     const [userId, setUserId] = useState<string | null>(null);
-    const [posted, setPosted] = useState<{ image_url: string; selfie_url: string; caption: string } | null>(null);
-    const [shot, setShot] = useState<Upload | null>(null);
-    const [selfie, setSelfie] = useState<Upload | null>(null);
-    const [hint, setHint] = useState("");
-    const [options, setOptions] = useState<string[]>([]);
-    const [optionIndex, setOptionIndex] = useState(0);
-    const [caption, setCaption] = useState("");
+    const [posted, setPosted] = useState<Posted | null>(null);
+
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState<Song[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [song, setSong] = useState<Song | null>(null);
+    const [snippetStart, setSnippetStart] = useState(0);
+
+    const [moment, setMoment] = useState("");
+    const [memes, setMemes] = useState<Meme[]>([]);
+    const [memeIndex, setMemeIndex] = useState(0);
     const [aiPrompt, setAiPrompt] = useState("");
     const [busy, setBusy] = useState("");
     const [error, setError] = useState("");
@@ -46,7 +50,7 @@ export default function Enter() {
             setUserId(user.id);
             const { data } = await supabase
                 .from("entries")
-                .select("image_url, selfie_url, caption")
+                .select("meme_url, image_url, caption, song_title, song_artist, song_preview, snippet_start")
                 .eq("user_id", user.id)
                 .eq("battle_date", date)
                 .maybeSingle();
@@ -54,23 +58,39 @@ export default function Enter() {
         })();
     }, [supabase, date]);
 
-    async function generate(s = shot, f = selfie, fresh = false) {
-        if (!s || !f) return;
-
-        // Show the next caption we already have, instantly.
-        if (!fresh && optionIndex + 1 < options.length) {
-            const next = optionIndex + 1;
-            setOptionIndex(next);
-            setCaption(options[next]);
+    useEffect(() => {
+        if (query.trim().length < 2) {
+            setResults([]);
             return;
         }
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            setSearching(true);
+            const res = await fetch(`/api/songs?q=${encodeURIComponent(query.trim())}`);
+            const body = await res.json();
+            if (cancelled) return;
+            setSearching(false);
+            if (!res.ok) setError(body.error);
+            else setResults(body.songs);
+        }, 350);
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [query]);
 
+    async function makeMeme(fresh = false) {
+        if (!song || !moment.trim()) return;
+        if (!fresh && memeIndex + 1 < memes.length) {
+            setMemeIndex(memeIndex + 1);
+            return;
+        }
         setError("");
-        setBusy("AI is listening… writing your captions");
-        const res = await fetch("/api/caption", {
+        setBusy("AI is cooking up your memes…");
+        const res = await fetch("/api/meme", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ screenshotPath: s.path, selfiePath: f.path, hint }),
+            body: JSON.stringify({ songTitle: song.title, songArtist: song.artist, moment }),
         });
         const body = await res.json();
         setBusy("");
@@ -78,62 +98,34 @@ export default function Enter() {
             setError(body.error);
             return;
         }
-        setOptions(body.captions);
-        setOptionIndex(0);
-        setCaption(body.captions[0]);
+        setMemes(body.memes);
+        setMemeIndex(0);
         setAiPrompt(body.aiPrompt);
     }
 
-    async function upload(kind: "shot" | "selfie", e: ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0];
-        e.target.value = "";
-        if (!file || !userId) return;
-        setError("");
-        setCaption("");
-        setOptions([]);
-        setBusy(kind === "shot" ? "Uploading screenshot…" : "Uploading selfie…");
-
-        let small: Blob;
-        try {
-            small = await shrink(file);
-        } catch {
-            setBusy("");
-            setError("Couldn't read that photo. Try a JPG or PNG.");
-            return;
-        }
-
-        const path = `${userId}/${date}-${kind}-${Date.now()}.jpg`;
-        const { error } = await supabase.storage
-            .from("entries")
-            .upload(path, small, { contentType: "image/jpeg" });
-        if (error) {
-            setBusy("");
-            setError(error.message);
-            return;
-        }
-        const up = { path, url: supabase.storage.from("entries").getPublicUrl(path).data.publicUrl };
-        setBusy("");
-        if (kind === "shot") {
-            setShot(up);
-            await generate(up, selfie, true);
-        } else {
-            setSelfie(up);
-            await generate(shot, up, true);
-        }
+    function chooseSong(s: Song) {
+        setSong(s);
+        setQuery("");
+        setResults([]);
+        setSnippetStart(0);
+        setMemes([]);
     }
 
     async function submit() {
-        if (!shot || !selfie || !caption || !userId) return;
+        const meme = memes[memeIndex];
+        if (!song || !meme || !userId) return;
         setBusy("Posting…");
         const { error } = await supabase.from("entries").insert({
             user_id: userId,
             battle_date: date,
             daily_prompt: prompt,
-            image_url: shot.url,
-            image_path: shot.path,
-            selfie_url: selfie.url,
-            selfie_path: selfie.path,
-            caption,
+            image_url: song.cover,
+            song_title: song.title,
+            song_artist: song.artist,
+            song_preview: song.preview,
+            snippet_start: snippetStart,
+            caption: moment.trim(),
+            meme_url: meme.url,
             ai_prompt: aiPrompt,
         });
         if (error) {
@@ -144,7 +136,8 @@ export default function Enter() {
         window.location.href = "/";
     }
 
-    const moreReady = options.length - optionIndex - 1;
+    const meme = memes[memeIndex];
+    const moreReady = memes.length - memeIndex - 1;
 
     return (
         <Window url="www.humorproject.com/post" className="narrow">
@@ -158,74 +151,120 @@ export default function Enter() {
                 </div>
             ) : posted ? (
                 <div className="form">
-                    <PostCard screenshot={posted.image_url} selfie={posted.selfie_url} caption={posted.caption} />
+                    <PostCard
+                        meme={posted.meme_url}
+                        cover={posted.image_url}
+                        caption={posted.caption}
+                        song={{ title: posted.song_title, artist: posted.song_artist, preview: posted.song_preview, start: posted.snippet_start }}
+                    />
                     <p>You posted today! New drop tomorrow.</p>
                     <Link href="/vote" className="btn btn-primary">Go vote →</Link>
                 </div>
             ) : (
                 <div className="form">
-                    <div className="upload-row">
-                        <label className="frame upload-slot">
-                            {shot ? (
-                                <img src={shot.url} alt="Your song screenshot" />
+                    <span className="label">1. Pick your song:</span>
+                    {song ? (
+                        <>
+                            <div className="frame song-picked">
+                                <img src={song.cover} alt="" />
+                                <div className="song-meta">
+                                    <p className="song-title">{song.title}</p>
+                                    <p className="song-artist">{song.artist}</p>
+                                </div>
+                                <button type="button" className="btn btn-sm" onClick={() => setSong(null)}>Change</button>
+                            </div>
+                            {song.preview ? (
+                                <div className="frame snippet-box">
+                                    <p className="label">Choose your snippet:</p>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={15}
+                                        step={1}
+                                        value={snippetStart}
+                                        onChange={(e) => setSnippetStart(Number(e.target.value))}
+                                        className="snippet-slider"
+                                        aria-label="Snippet start time"
+                                    />
+                                    <div className="snippet-row">
+                                        <span>Plays {time(snippetStart)} – {time(snippetStart + 15)}</span>
+                                        <SnippetButton src={song.preview} start={snippetStart} label="Preview" preload />
+                                    </div>
+                                </div>
                             ) : (
-                                <span className="photo-empty">
-                  <span className="slot-plus">＋</span>
-                  Upload song screenshot
-                </span>
+                                <p className="hint">No preview available for this song, but you can still post it.</p>
                             )}
-                            {shot && <span className="slot-change">Tap to change</span>}
-                            <input type="file" accept="image/png, image/jpeg, image/webp" onChange={(e) => upload("shot", e)} hidden />
-                        </label>
-                        <label className="frame upload-slot">
-                            {selfie ? (
-                                <img src={selfie.url} alt="Your selfie" />
-                            ) : (
-                                <span className="photo-empty">
-                  <span className="slot-plus">＋</span>
-                  Take selfie
-                </span>
-                            )}
-                            {selfie && <span className="slot-change">Tap to retake</span>}
+                        </>
+                    ) : (
+                        <>
                             <input
-                                type="file"
-                                accept="image/png, image/jpeg, image/webp"
-                                capture="user"
-                                onChange={(e) => upload("selfie", e)}
-                                hidden
+                                className="field song-search"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="Search a song or artist"
+                                autoFocus
                             />
-                        </label>
-                    </div>
+                            {searching && <p className="status">Searching…</p>}
+                            {results.length > 0 && (
+                                <ul className="song-results">
+                                    {results.map((s) => (
+                                        <li key={s.id} className="frame song-row">
+                                            <button type="button" className="song-choose" onClick={() => chooseSong(s)}>
+                                                <img src={s.cover} alt="" />
+                                                <span className="song-meta">
+                          <span className="song-title">{s.title}</span>
+                          <span className="song-artist">{s.artist}</span>
+                        </span>
+                                            </button>
+                                            {s.preview && <SnippetButton src={s.preview} />}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </>
+                    )}
 
                     <label>
-                        <span className="label">Hint for the AI (optional):</span>
-                        <input
-                            className="field"
-                            value={hint}
+                        <span className="label">2. What&apos;s happening right now?</span>
+                        <textarea
+                            className="field moment-field"
+                            value={moment}
                             onChange={(e) => {
-                                setHint(e.target.value);
-                                setOptions([]);
+                                setMoment(e.target.value);
+                                setMemes([]);
                             }}
-                            placeholder="cramming for orgo"
-                            maxLength={100}
+                            placeholder="cramming orgo in Butler at 2am"
+                            maxLength={150}
+                            rows={2}
                         />
                     </label>
 
-                    {caption && (
-                        <div className="frame caption-box">
-                            <p className="label">AI caption:</p>
-                            <p className="caption-text">{caption}</p>
+                    {!meme && (
+                        <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={() => makeMeme(true)}
+                            disabled={!song || !moment.trim() || !!busy}
+                        >
+                            ✨ Make my meme
+                        </button>
+                    )}
+
+                    {meme && (
+                        <div className="frame meme-box">
+                            <p className="label">Your AI meme:</p>
+                            <img src={meme.url} alt="Your AI-generated meme" />
                         </div>
                     )}
                     {busy && <p className="status">{busy}</p>}
                     {error && <p className="error">{error}</p>}
-                    {shot && selfie && (
-                        <button className="btn" onClick={() => generate()} disabled={!!busy}>
-                            {!caption ? "Generate caption" : moreReady > 0 ? `↻ New caption (${moreReady} more ready)` : "↻ New captions"}
+                    {meme && (
+                        <button type="button" className="btn" onClick={() => makeMeme()} disabled={!!busy}>
+                            {moreReady > 0 ? `↻ New meme (${moreReady} more ready)` : "↻ New memes"}
                         </button>
                     )}
-                    {caption && (
-                        <button className="btn btn-primary" onClick={submit} disabled={!!busy}>
+                    {meme && (
+                        <button type="button" className="btn btn-primary" onClick={submit} disabled={!!busy}>
                             Post it →
                         </button>
                     )}

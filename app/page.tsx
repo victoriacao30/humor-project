@@ -15,7 +15,7 @@ async function rankedEntries(supabase: Supabase, date: string) {
     const [{ data: rows }, { data: scores }] = await Promise.all([
         supabase
             .from("entries")
-            .select("id, user_id, image_url, selfie_url, caption, created_at")
+            .select("id, user_id, meme_url, image_url, caption, created_at, song_title, song_artist, song_preview, snippet_start")
             .eq("battle_date", date),
         supabase.rpc("battle_scores", { d: date }),
     ]);
@@ -63,8 +63,8 @@ export default async function Home() {
                 <p className="label">Today&apos;s drop:</p>
                 <h1 className="prompt-text">{today.prompt}</h1>
                 <p className="hint">
-                    Once a day at a surprise time, share a screenshot of your song + a selfie of what you&apos;re doing.
-                    AI writes the caption, then everyone votes.
+                    Once a day at a surprise time, share your song and what you&apos;re doing. AI turns it into a meme,
+                    then everyone votes on the best one.
                 </p>
                 <DropStatus dropAt={today.dropAt} />
                 {!user ? (
@@ -86,15 +86,17 @@ export default async function Home() {
             </Window>
 
             {user && champ && (
-                <Window url="www.humorproject.com/hall-of-fame">
+                <Window url="www.humorproject.com/hall-of-fame" className="narrow">
                     <p className="label">Yesterday&apos;s champion 👑</p>
-                    <div className="winner">
-                        <PostCard screenshot={champ.image_url} selfie={champ.selfie_url} late={champ.late} />
-                        <div>
-                            <p className="caption-text">{champ.caption}</p>
-                            <p className="leader-meta">by {champ.name} · {Math.round(champ.rate * 100)}% win rate</p>
-                        </div>
-                    </div>
+                    <PostCard
+                        meme={champ.meme_url}
+                        cover={champ.image_url}
+                        caption={champ.caption}
+                        name={champ.name}
+                        late={champ.late}
+                        song={{ title: champ.song_title, artist: champ.song_artist, preview: champ.song_preview, start: champ.snippet_start }}
+                    />
+                    <p className="leader-meta">{Math.round(champ.rate * 100)}% win rate</p>
                 </Window>
             )}
 
@@ -108,10 +110,10 @@ export default async function Home() {
                             {todayRanked.map((e, i) => (
                                 <li key={e.id} className="frame leader-row">
                                     <span className="rank">{i + 1}</span>
-                                    <PostCard screenshot={e.image_url} selfie={e.selfie_url} late={e.late} size="sm" />
+                                    <PostCard meme={e.meme_url} late={e.late} size="sm" />
                                     <div>
-                                        <p className="caption-text">{e.caption}</p>
-                                        <p className="leader-meta">by {e.name}{e.user_id === user.id ? " (you)" : ""}</p>
+                                        <p className="caption-text">“{e.caption}”</p>
+                                        <p className="leader-meta">♫ {e.song_title} · by {e.name}{e.user_id === user.id ? " (you)" : ""}</p>
                                     </div>
                                     <div className="score">
                                         {Math.round(e.rate * 100)}%
@@ -126,4 +128,3 @@ export default async function Home() {
         </div>
     );
 }
-

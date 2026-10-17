@@ -3,14 +3,24 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 import { getToday } from "@/lib/battle";
 import Window from "@/app/components/Window";
+import PostCard from "@/app/components/PostCard";
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
 ];
 const pad = (n: number) => String(n).padStart(2, "0");
+const FIELDS = "meme_url, image_url, caption, song_title, song_artist, song_preview, snippet_start";
 
-type Post = { image_url: string; selfie_url: string; caption: string };
+type Post = {
+    meme_url: string;
+    image_url: string;
+    caption: string;
+    song_title: string;
+    song_artist: string;
+    song_preview: string | null;
+    snippet_start: number;
+};
 type Winner = Post & { name: string };
 type Score = { entry_id: number; wins: number; matchups: number };
 
@@ -21,6 +31,10 @@ function prettyDate(date: string) {
         day: "numeric",
         timeZone: "UTC",
     });
+}
+
+function songOf(p: Post) {
+    return { title: p.song_title, artist: p.song_artist, preview: p.song_preview, start: p.snippet_start };
 }
 
 export default function PostCalendar({ userId }: { userId: string }) {
@@ -48,53 +62,37 @@ export default function PostCalendar({ userId }: { userId: string }) {
             const lastDay = new Date(Date.UTC(month.y, month.m, 0)).getUTCDate();
             const { data } = await supabase
                 .from("entries")
-                .select("battle_date, image_url, selfie_url, caption")
+                .select(`battle_date, ${FIELDS}`)
                 .eq("user_id", userId)
                 .gte("battle_date", `${month.y}-${pad(month.m)}-01`)
                 .lte("battle_date", `${month.y}-${pad(month.m)}-${pad(lastDay)}`);
-            setPosts(
-                new Map(
-                    (data ?? []).map((d) => [
-                        d.battle_date,
-                        { image_url: d.image_url, selfie_url: d.selfie_url, caption: d.caption },
-                    ])
-                )
-            );
+            setPosts(new Map((data ?? []).map((d) => [d.battle_date as string, d as unknown as Post])));
         })();
     }, [supabase, userId, month]);
 
     async function loadWinner(date: string) {
         setWinner(undefined);
         const [{ data: rows }, { data: scores }] = await Promise.all([
-            supabase.from("entries").select("id, user_id, image_url, selfie_url, caption").eq("battle_date", date),
+            supabase.from("entries").select(`id, user_id, ${FIELDS}`).eq("battle_date", date),
             supabase.rpc("battle_scores", { d: date }),
         ]);
         const scoreMap = new Map(((scores ?? []) as Score[]).map((s) => [s.entry_id, s]));
-        const top = (rows ?? [])
+        const top = ((rows ?? []) as unknown as (Post & { id: number; user_id: string })[])
             .map((e) => {
                 const s = scoreMap.get(e.id);
-                const wins = Number(s?.wins ?? 0);
-                const matchups = Number(s?.matchups ?? 0);
-                return { ...e, wins, matchups, rate: matchups ? wins / matchups : 0 };
+                const w = Number(s?.wins ?? 0);
+                const m = Number(s?.matchups ?? 0);
+                return { ...e, w, m, rate: m ? w / m : 0 };
             })
-            .filter((e) => e.matchups > 0)
-            .sort((a, b) => b.rate - a.rate || b.wins - a.wins)[0];
+            .filter((e) => e.m > 0)
+            .sort((a, b) => b.rate - a.rate || b.w - a.w)[0];
 
         if (!top) {
             setWinner(null);
             return;
         }
-        const { data: person } = await supabase
-            .from("profiles")
-            .select("first_name")
-            .eq("id", top.user_id)
-            .maybeSingle();
-        setWinner({
-            image_url: top.image_url,
-            selfie_url: top.selfie_url,
-            caption: top.caption,
-            name: person?.first_name ?? "Someone",
-        });
+        const { data: person } = await supabase.from("profiles").select("first_name").eq("id", top.user_id).maybeSingle();
+        setWinner({ ...top, name: person?.first_name ?? "Someone" });
     }
 
     function openDay(date: string) {
@@ -162,13 +160,7 @@ export default function PostCalendar({ userId }: { userId: string }) {
             {selected && post && (
                 <div className="cal-detail" ref={detailRef}>
                     <p className="label">{prettyDate(selected)}</p>
-                    <div className="pair-photos">
-                        <img src={post.image_url} alt="Your song screenshot" />
-                        <img src={post.selfie_url} alt="Your selfie" />
-                    </div>
-                    <div className="frame caption-box">
-                        <p className="caption-text">{post.caption}</p>
-                    </div>
+                    <PostCard meme={post.meme_url} cover={post.image_url} caption={post.caption} song={songOf(post)} />
 
                     {selected === today ? (
                         <p className="hint">Voting is still open. Winner announced tomorrow!</p>
@@ -181,13 +173,7 @@ export default function PostCalendar({ userId }: { userId: string }) {
                     ) : (
                         <div className="cal-winner">
                             <p className="label">Winner that day: {winner.name} 👑</p>
-                            <div className="pair-photos">
-                                <img src={winner.image_url} alt={`${winner.name}'s song screenshot`} />
-                                <img src={winner.selfie_url} alt={`${winner.name}'s selfie`} />
-                            </div>
-                            <div className="frame caption-box">
-                                <p className="caption-text">{winner.caption}</p>
-                            </div>
+                            <PostCard meme={winner.meme_url} cover={winner.image_url} caption={winner.caption} song={songOf(winner)} />
                         </div>
                     )}
                 </div>

@@ -6,7 +6,17 @@ import { getToday, isLate } from "@/lib/battle";
 import Window from "@/app/components/Window";
 import PostCard from "@/app/components/PostCard";
 
-type Entry = { id: number; image_url: string; selfie_url: string; caption: string; created_at: string };
+type Entry = {
+    id: number;
+    meme_url: string;
+    image_url: string;
+    caption: string;
+    created_at: string;
+    song_title: string;
+    song_artist: string;
+    song_preview: string | null;
+    snippet_start: number;
+};
 
 function pairKey(a: number, b: number) {
     return a < b ? `${a}-${b}` : `${b}-${a}`;
@@ -57,7 +67,7 @@ export default function Vote() {
             const [{ data: entryRows }, { data: voteRows }] = await Promise.all([
                 supabase
                     .from("entries")
-                    .select("id, image_url, selfie_url, caption, created_at")
+                    .select("id, meme_url, image_url, caption, created_at, song_title, song_artist, song_preview, snippet_start")
                     .eq("battle_date", date)
                     .neq("user_id", user.id),
                 supabase.from("votes").select("winner_id, loser_id").eq("voter_id", user.id).eq("battle_date", date),
@@ -104,7 +114,7 @@ export default function Vote() {
                 <p className="status">Loading matchups…</p>
             ) : !hasEntry ? (
                 <div className="form">
-                    <p>Post today first! Share your song + selfie, then come back to judge everyone else.</p>
+                    <p>Post today first! Pick your song and make your meme, then come back to judge everyone else.</p>
                     <Link href="/enter" className="btn btn-primary">Post now →</Link>
                 </div>
             ) : entries.length < 2 ? (
@@ -119,25 +129,27 @@ export default function Vote() {
                 </div>
             ) : (
                 <>
-                    <p className="hint">Which post wins? Tap it. ({seen.size} judged so far)</p>
+                    <p className="hint">Which meme wins? Tap ▶ to hear their song. ({seen.size} judged so far)</p>
                     <div className="versus">
-                        <button className="frame vs-card" onClick={() => choose(pair[0], pair[1])}>
-                            <PostCard
-                                screenshot={pair[0].image_url}
-                                selfie={pair[0].selfie_url}
-                                caption={pair[0].caption}
-                                late={isLate(pair[0].created_at, date)}
-                            />
-                        </button>
+                        {[0, 1].map((i) => {
+                            const entry = pair[i];
+                            const other = pair[1 - i];
+                            return (
+                                <div key={entry.id} className={`frame vs-card${i === 1 ? " vs-card-right" : ""}`}>
+                                    <PostCard
+                                        meme={entry.meme_url}
+                                        cover={entry.image_url}
+                                        caption={entry.caption}
+                                        late={isLate(entry.created_at, date)}
+                                        song={{ title: entry.song_title, artist: entry.song_artist, preview: entry.song_preview, start: entry.snippet_start }}
+                                    />
+                                    <button type="button" className="btn btn-primary" onClick={() => choose(entry, other)}>
+                                        This one wins ★
+                                    </button>
+                                </div>
+                            );
+                        })}
                         <span className="vs-badge">VS</span>
-                        <button className="frame vs-card" onClick={() => choose(pair[1], pair[0])}>
-                            <PostCard
-                                screenshot={pair[1].image_url}
-                                selfie={pair[1].selfie_url}
-                                caption={pair[1].caption}
-                                late={isLate(pair[1].created_at, date)}
-                            />
-                        </button>
                     </div>
                     {error && <p className="error">{error}</p>}
                 </>
