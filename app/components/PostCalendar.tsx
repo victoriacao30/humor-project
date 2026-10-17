@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { getToday } from "@/lib/battle";
 import Window from "@/app/components/Window";
 import PostCard from "@/app/components/PostCard";
+import ShareButton from "@/app/components/ShareButton";
 
 const MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -20,6 +21,7 @@ type Post = {
     song_artist: string;
     song_preview: string | null;
     snippet_start: number;
+    id?: number;
 };
 type Winner = Post & { name: string };
 type Score = { entry_id: number; wins: number; matchups: number };
@@ -62,7 +64,7 @@ export default function PostCalendar({ userId }: { userId: string }) {
             const lastDay = new Date(Date.UTC(month.y, month.m, 0)).getUTCDate();
             const { data } = await supabase
                 .from("entries")
-                .select(`battle_date, ${FIELDS}`)
+                .select(`id, battle_date, ${FIELDS}`)
                 .eq("user_id", userId)
                 .gte("battle_date", `${month.y}-${pad(month.m)}-01`)
                 .lte("battle_date", `${month.y}-${pad(month.m)}-${pad(lastDay)}`);
@@ -161,6 +163,7 @@ export default function PostCalendar({ userId }: { userId: string }) {
                 <div className="cal-detail" ref={detailRef}>
                     <p className="label">{prettyDate(selected)}</p>
                     <PostCard meme={post.meme_url} cover={post.image_url} caption={post.caption} song={songOf(post)} />
+                    {post.id && <ShareButton id={post.id} label="Share this day" />}
 
                     {selected === today ? (
                         <p className="hint">Voting is still open. Winner announced tomorrow!</p>

@@ -6,6 +6,7 @@ import { getToday } from "@/lib/battle";
 import Window from "@/app/components/Window";
 import PostCard from "@/app/components/PostCard";
 import SnippetButton from "@/app/components/SnippetButton";
+import ShareButton from "@/app/components/ShareButton";
 
 type Song = { id: number; title: string; artist: string; cover: string; preview: string | null };
 type Meme = { url: string; templateId: string };
@@ -17,6 +18,7 @@ type Posted = {
     song_artist: string;
     song_preview: string | null;
     snippet_start: number;
+    id: number;
 };
 
 const time = (s: number) => `0:${String(s).padStart(2, "0")}`;
@@ -50,7 +52,7 @@ export default function Enter() {
             setUserId(user.id);
             const { data } = await supabase
                 .from("entries")
-                .select("meme_url, image_url, caption, song_title, song_artist, song_preview, snippet_start")
+                .select("id, meme_url, image_url, caption, song_title, song_artist, song_preview, snippet_start")
                 .eq("user_id", user.id)
                 .eq("battle_date", date)
                 .maybeSingle();
@@ -158,6 +160,7 @@ export default function Enter() {
                         song={{ title: posted.song_title, artist: posted.song_artist, preview: posted.song_preview, start: posted.snippet_start }}
                     />
                     <p>You posted today! New drop tomorrow.</p>
+                    <ShareButton id={posted.id} label="Share my post" />
                     <Link href="/vote" className="btn btn-primary">Go vote →</Link>
                 </div>
             ) : (

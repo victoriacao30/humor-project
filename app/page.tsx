@@ -112,7 +112,7 @@ export default async function Home() {
                                     <span className="rank">{i + 1}</span>
                                     <PostCard meme={e.meme_url} late={e.late} size="sm" />
                                     <div>
-                                        <p className="caption-text">“{e.caption}”</p>
+                                        <Link href={`/p/${e.id}`} className="caption-text caption-link">“{e.caption}”</Link>
                                         <p className="leader-meta">♫ {e.song_title} · by {e.name}{e.user_id === user.id ? " (you)" : ""}</p>
                                     </div>
                                     <div className="score">

@@ -503,5 +503,8 @@ body {
 .meme-box { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .meme-box img { width: 100%; border: 3px solid var(--ink); border-radius: 12px; background: #fff; }
 
+.caption-link { display: block; text-decoration: underline; text-decoration-style: wavy; text-decoration-color: var(--peri); text-underline-offset: 4px; }
+.caption-link:hover { color: var(--peri-dark); }
+.share-hint { margin: 20px 0 0; }
 
 
