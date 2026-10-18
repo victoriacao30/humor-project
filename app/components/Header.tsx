@@ -25,7 +25,7 @@ export default async function Header() {
                 <nav className="topbar-nav">
                     <Link href="/vote" className="btn btn-sm">Vote</Link>
                     <Link href="/wrapped" className="btn btn-sm">Wrapped</Link>
-                    <Link href="/members" className="btn btn-sm">Members</Link>
+                    <Link href="/groups" className="btn btn-sm">Groups</Link>
                     <Link href="/profile" className="btn btn-sm">Profile</Link>
                     {avatarUrl && <img src={avatarUrl} alt="" className="avatar" />}
                     <SignOutButton />

@@ -524,6 +524,50 @@ body {
 .week-day { display: flex; flex-direction: column; gap: 6px; }
 
 .wrapped-vibe { align-self: flex-start; font-size: 16px; padding: 2px 14px; }
+.group-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 700px) { .group-forms { grid-template-columns: 1fr; } }
 
+.group-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  transition: transform 0.1s, background 0.15s;
+}
+.group-row:hover { background: #f4f6ff; transform: rotate(-0.5deg); }
+.group-name { font-family: var(--font-display), sans-serif; font-size: 22px; letter-spacing: 0.06em; text-transform: uppercase; }
+.group-row .leader-meta { flex: 1; }
+.group-go { font-size: 24px; }
+
+.invite-box { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; margin: 6px 0 20px; }
+.invite-box .label { margin: 0; }
+.invite-code { font-family: var(--font-display), sans-serif; font-size: 28px; letter-spacing: 0.25em; color: var(--peri-dark); }
+.leave-btn { margin-left: auto; }
+.leave-btn:hover { background: #ffd6cc; }
+
+.member-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.member-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cream);
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 4px 14px 4px 4px;
+}
+.member-chip img, .chip-initial {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--ink);
+}
+.chip-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--peri);
+  font-family: var(--font-display), sans-serif;
+}
 
 
