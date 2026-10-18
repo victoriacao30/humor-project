@@ -35,7 +35,7 @@ export default function VoteBoard({ groupId }: { groupId?: number }) {
     const [hasEntry, setHasEntry] = useState(false);
     const [error, setError] = useState("");
     const notYet = Date.now() < dropAt;
-    const backHref = groupId ? `/groups/${groupId}` : "/";
+    const backHref = groupId ? `/groups/${groupId}` : "/vote";
 
     const pickPair = useCallback((list: Entry[], seenPairs: Set<string>) => {
         const options: [Entry, Entry][] = [];
@@ -125,7 +125,7 @@ export default function VoteBoard({ groupId }: { groupId?: number }) {
 
     return (
         <Window url={groupId ? `www.humorproject.com/groups/${groupId}/vote` : "www.humorproject.com/vote"}>
-            {groupName && <p className="label">Voting in {groupName} ★</p>}
+            <p className="label vote-where">{groupName ? `Voting in ${groupName} ★` : groupId ? "Voting in your group ★" : "Voting with everyone 🌍"}</p>
             <p className="label">Today&apos;s drop:</p>
             <h1 className="prompt-text">{prompt}</h1>
 

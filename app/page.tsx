@@ -11,13 +11,18 @@ export const dynamic = "force-dynamic";
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type Score = { entry_id: number; wins: number; matchups: number };
 
-async function rankedEntries(supabase: Supabase, date: string) {
+async function rankedEntries(supabase: Supabase, date: string, group?: { id: number; memberIds: string[] }) {
+    let entryQuery = supabase
+        .from("entries")
+        .select("id, user_id, meme_url, image_url, caption, created_at, song_title, song_artist, song_preview, snippet_start")
+        .eq("battle_date", date);
+    if (group) entryQuery = entryQuery.in("user_id", group.memberIds);
+
     const [{ data: rows }, { data: scores }] = await Promise.all([
-        supabase
-            .from("entries")
-            .select("id, user_id, meme_url, image_url, caption, created_at, song_title, song_artist, song_preview, snippet_start")
-            .eq("battle_date", date),
-        supabase.rpc("battle_scores", { d: date }),
+        entryQuery,
+        group
+            ? supabase.rpc("group_scores", { g: group.id, d: date })
+            : supabase.rpc("battle_scores", { d: date }),
     ]);
     const entries = rows ?? [];
     const ids = [...new Set(entries.map((e) => e.user_id))];
@@ -44,7 +49,8 @@ async function rankedEntries(supabase: Supabase, date: string) {
         .sort((a, b) => b.rate - a.rate || b.wins - a.wins);
 }
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ board?: string }> }) {
+    const { board } = await searchParams;
     const supabase = await createClient();
     const {
         data: { user },
@@ -52,10 +58,23 @@ export default async function Home() {
     const today = getToday();
     const dropped = Date.now() >= today.dropAt;
 
-    const todayRanked = user && dropped ? await rankedEntries(supabase, today.date) : [];
+    const [{ data: myGroups }, { data: mine }] = user
+        ? await Promise.all([
+            supabase.from("groups").select("id, name").order("created_at"),
+            supabase.from("entries").select("id").eq("user_id", user.id).eq("battle_date", today.date).maybeSingle(),
+        ])
+        : [{ data: [] as { id: number; name: string }[] }, { data: null }];
+
+    const activeGroup = (myGroups ?? []).find((g) => String(g.id) === board) ?? null;
+    let group: { id: number; memberIds: string[] } | undefined;
+    if (activeGroup) {
+        const { data: m } = await supabase.from("group_members").select("user_id").eq("group_id", activeGroup.id);
+        group = { id: activeGroup.id, memberIds: (m ?? []).map((x) => x.user_id) };
+    }
+
+    const todayRanked = user && dropped ? await rankedEntries(supabase, today.date, group) : [];
     const yesterdayRanked = user ? await rankedEntries(supabase, getYesterday().date) : [];
     const champ = yesterdayRanked.find((e) => e.matchups > 0);
-    const myEntry = todayRanked.find((e) => e.user_id === user?.id);
 
     return (
         <div className="stack">
@@ -73,7 +92,7 @@ export default async function Home() {
                     </div>
                 ) : dropped ? (
                     <div className="actions">
-                        {myEntry ? (
+                        {mine ? (
                             <>
                                 <span className="you-tag">Posted ✓</span>
                                 <Link href="/vote" className="btn btn-primary">Start voting →</Link>
@@ -101,8 +120,26 @@ export default async function Home() {
             )}
 
             {user && dropped && (
-                <Window url="www.humorproject.com/leaderboard">
-                    <p className="label">Today&apos;s leaderboard:</p>
+                <Window url={activeGroup ? `www.humorproject.com/leaderboard/${activeGroup.id}` : "www.humorproject.com/leaderboard"}>
+                    {(myGroups ?? []).length > 0 && (
+                        <div className="board-tabs">
+                            <Link href="/" scroll={false} className={`btn btn-sm${!activeGroup ? " btn-primary" : ""}`}>
+                                🌍 Everyone
+                            </Link>
+                            {(myGroups ?? []).map((g) => (
+                                <Link
+                                    key={g.id}
+                                    href={`/?board=${g.id}`}
+                                    scroll={false}
+                                    className={`btn btn-sm${activeGroup?.id === g.id ? " btn-primary" : ""}`}
+                                >
+                                    {g.name}
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+
+                    <p className="label">{activeGroup ? `${activeGroup.name}'s leaderboard:` : "Everyone's leaderboard:"}</p>
                     {todayRanked.length === 0 ? (
                         <p className="hint">No posts yet. Be the first!</p>
                     ) : (
@@ -123,6 +160,7 @@ export default async function Home() {
                             ))}
                         </ol>
                     )}
+                    {activeGroup && <p className="share-hint leader-meta">Only votes from group members count here.</p>}
                 </Window>
             )}
         </div>

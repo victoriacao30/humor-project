@@ -569,5 +569,8 @@ body {
   background: var(--peri);
   font-family: var(--font-display), sans-serif;
 }
+.board-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.vote-hub-note { margin-bottom: 20px; }
+.vote-where { color: var(--peri-dark); }
 
 

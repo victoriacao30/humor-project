@@ -97,7 +97,7 @@ export default function Enter() {
         const body = await res.json();
         setBusy("");
         if (!res.ok) {
-            setError(body.error);
+            setError(body.detail ? `${body.error} (${body.detail})` : body.error);
             return;
         }
         setMemes(body.memes);
