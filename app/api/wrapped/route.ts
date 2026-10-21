@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { generateJsonText } from "@/lib/gemini";
 import { createClient } from "@/lib/supabase-server";
 import { addDays } from "@/lib/week";
 
 export const maxDuration = 30;
-
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite";
 
 type Wrapped = { title: string; vibe: string; summary: string; funFact: string; prediction: string };
 
@@ -59,14 +57,7 @@ export async function POST(request: Request) {
     ].join("\n");
 
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const response = await ai.models.generateContent({
-            model: MODEL,
-            contents: [{ role: "user", parts: [{ text: aiPrompt }] }],
-            config: { responseMimeType: "application/json" },
-        });
-
-        const text = (response.text ?? "").replace(/```(json)?/g, "").trim();
+        const text = (await generateJsonText(aiPrompt)).replace(/```(json)?/g, "").trim();
         const parsed = JSON.parse(text) as Partial<Wrapped>;
         const keys: (keyof Wrapped)[] = ["title", "vibe", "summary", "funFact", "prediction"];
         if (!keys.every((k) => typeof parsed[k] === "string" && parsed[k]!.trim())) {

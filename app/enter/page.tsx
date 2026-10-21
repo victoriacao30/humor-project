@@ -22,6 +22,12 @@ type Posted = {
 };
 
 const time = (s: number) => `0:${String(s).padStart(2, "0")}`;
+const COOKING = [
+    "AI is listening to your song…",
+    "Picking the perfect meme templates…",
+    "Writing the punchlines…",
+    "Drawing your memes…",
+];
 
 export default function Enter() {
     const [supabase] = useState(() => createClient());
@@ -41,6 +47,13 @@ export default function Enter() {
     const [aiPrompt, setAiPrompt] = useState("");
     const [busy, setBusy] = useState("");
     const [error, setError] = useState("");
+    const [cookStep, setCookStep] = useState(0);
+    useEffect(() => {
+        if (!busy.startsWith("AI")) return;
+        setCookStep(0);
+        const timer = setInterval(() => setCookStep((s) => Math.min(s + 1, COOKING.length - 1)), 2500);
+        return () => clearInterval(timer);
+    }, [busy]);
     const notYet = Date.now() < dropAt;
 
     useEffect(() => {
@@ -259,7 +272,7 @@ export default function Enter() {
                             <img src={meme.url} alt="Your AI-generated meme" />
                         </div>
                     )}
-                    {busy && <p className="status">{busy}</p>}
+                    {busy && <p className="status">{busy.startsWith("AI") ? COOKING[cookStep] : busy}</p>}
                     {error && <p className="error">{error}</p>}
                     {meme && (
                         <button type="button" className="btn" onClick={() => makeMeme()} disabled={!!busy}>

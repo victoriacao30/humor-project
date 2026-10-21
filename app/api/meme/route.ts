@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
+import { generateJsonText } from "@/lib/gemini";
 import { createClient } from "@/lib/supabase-server";
 
 export const maxDuration = 45;
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite";
 const DEV = process.env.NODE_ENV !== "production";
 
 type Template = { id: string; name: string; box_count: number };
@@ -20,7 +20,7 @@ async function getTemplates() {
     if (!body.success) throw new Error("Imgflip templates unavailable");
     const templates = (body.data.memes as Template[])
         .filter((t) => t.box_count >= 2 && t.box_count <= 4)
-        .slice(0, 80)
+        .slice(0, 40)
         .map(({ id, name, box_count }) => ({ id: String(id), name, box_count }));
     cache = { at: Date.now(), templates };
     return templates;
@@ -64,26 +64,17 @@ function readIdeas(text: string, byId: Map<string, Template>): Idea[] {
 }
 
 async function askForIdeas(prompt: string) {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-        model: MODEL,
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.ARRAY,
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        templateId: { type: Type.STRING },
-                        boxes: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    },
-                    required: ["templateId", "boxes"],
-                },
+    return generateJsonText(prompt, {
+        type: Type.ARRAY,
+        items: {
+            type: Type.OBJECT,
+            properties: {
+                templateId: { type: Type.STRING },
+                boxes: { type: Type.ARRAY, items: { type: Type.STRING } },
             },
+            required: ["templateId", "boxes"],
         },
     });
-    return response.text ?? "";
 }
 
 export async function POST(request: Request) {
@@ -161,6 +152,12 @@ export async function POST(request: Request) {
         return NextResponse.json(
             { error: "Lots of people are making memes right now. Wait a minute and try again.", ...detail },
             { status: 429 }
+        );
+    }
+    if (message.includes("503") || message.includes("UNAVAILABLE") || message.includes("high demand")) {
+        return NextResponse.json(
+            { error: "Google's AI is overloaded right now. Wait a few seconds and try again.", ...detail },
+            { status: 503 }
         );
     }
     if (lastError instanceof ImgflipError) {
