@@ -587,5 +587,12 @@ body {
 .skeleton-short { height: 60px; width: 60%; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
+.window .window-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 3px solid var(--ink);
+}
 
 
