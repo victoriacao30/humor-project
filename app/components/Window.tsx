@@ -11,7 +11,7 @@ export default function Window({
 }) {
     return (
         <section className={`window ${className}`}>
-            <div className="window-bar" aria-hidden="true">
+            <div className="wiandow-bar" aria-hidden="true">
                 <span className="hide-sm">←</span>
                 <span className="hide-sm">→</span>
                 <span className="hide-sm">↻</span>

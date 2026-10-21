@@ -573,4 +573,19 @@ body {
 .vote-hub-note { margin-bottom: 20px; }
 .vote-where { color: var(--peri-dark); }
 
+.loading-pulse { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.4; } }
+.skeleton {
+  height: 120px;
+  margin-top: 14px;
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  background: linear-gradient(90deg, var(--cream) 25%, #fff 50%, var(--cream) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+.skeleton-short { height: 60px; width: 60%; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+
 
