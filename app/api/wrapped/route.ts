@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { generateJsonText } from "@/lib/gemini";
 import { createClient } from "@/lib/supabase-server";
 import { addDays } from "@/lib/week";
+import { generateJsonText } from "@/lib/gemini";
+import { finishRequest, loadAiConfig, logResponse, startRequest } from "@/lib/ai-log";
 
 export const maxDuration = 30;
 
@@ -32,17 +33,21 @@ export async function POST(request: Request) {
             .order("battle_date"),
         supabase.from("profiles").select("first_name").eq("id", user.id).maybeSingle(),
     ]);
-
     if (!posts?.length) {
         return NextResponse.json({ error: "Post at least once this week to unlock your Wrapped." }, { status: 400 });
     }
 
+    const config = await loadAiConfig(supabase, "weekly-wrapped");
+    if (!config.enabled) {
+        return NextResponse.json({ error: "Wrapped is paused by an admin right now. Try again later." }, { status: 503 });
+    }
+
+    const startedAt = Date.now();
+    const requestId = await startRequest(supabase, user.id, "weekly-wrapped", { weekStart, posts: posts.length });
+
     const lines = posts
         .map((p) => {
-            const day = new Date(`${p.battle_date}T12:00:00Z`).toLocaleDateString("en-US", {
-                weekday: "long",
-                timeZone: "UTC",
-            });
+            const day = new Date(`${p.battle_date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
             return `${day}: "${p.song_title}" by ${p.song_artist}, while ${p.caption}`;
         })
         .join("\n");
@@ -57,7 +62,11 @@ export async function POST(request: Request) {
     ].join("\n");
 
     try {
-        const text = (await generateJsonText(aiPrompt)).replace(/```(json)?/g, "").trim();
+        const { text: raw } = await generateJsonText(aiPrompt, {
+            models: config.models,
+            onAttempt: (a) => logResponse(supabase, requestId, a),
+        });
+        const text = raw.replace(/```(json)?/g, "").trim();
         const parsed = JSON.parse(text) as Partial<Wrapped>;
         const keys: (keyof Wrapped)[] = ["title", "vibe", "summary", "funFact", "prediction"];
         if (!keys.every((k) => typeof parsed[k] === "string" && parsed[k]!.trim())) {
@@ -67,21 +76,20 @@ export async function POST(request: Request) {
 
         const { error } = await supabase
             .from("wrapped")
-            .upsert(
-                { user_id: user.id, week_start: weekStart, content, ai_prompt: aiPrompt },
-                { onConflict: "user_id,week_start" }
-            );
+            .upsert({ user_id: user.id, week_start: weekStart, content, ai_prompt: aiPrompt }, { onConflict: "user_id,week_start" });
         if (error) console.error("Wrapped save error:", error);
 
+        await finishRequest(supabase, requestId, startedAt, "succeeded");
         return NextResponse.json({ content });
     } catch (e) {
         console.error("Wrapped error:", e);
         const message = String(e);
+        await finishRequest(supabase, requestId, startedAt, "failed", message.slice(0, 500));
         if (message.includes("429") || message.includes("RESOURCE_EXHAUSTED")) {
-            return NextResponse.json(
-                { error: "The AI is busy right now. Wait a minute and try again." },
-                { status: 429 }
-            );
+            return NextResponse.json({ error: "The AI is busy right now. Wait a minute and try again." }, { status: 429 });
+        }
+        if (message.includes("503") || message.includes("UNAVAILABLE") || message.includes("high demand")) {
+            return NextResponse.json({ error: "Google's AI is overloaded right now. Wait a few seconds and try again." }, { status: 503 });
         }
         return NextResponse.json({ error: "The AI got stumped. Try again." }, { status: 500 });
     }

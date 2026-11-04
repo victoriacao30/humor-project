@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { Type } from "@google/genai";
-import { generateJsonText } from "@/lib/gemini";
+import { Type, type Schema } from "@google/genai";
 import { createClient } from "@/lib/supabase-server";
+import { generateJsonText } from "@/lib/gemini";
+import { finishRequest, loadAiConfig, logResponse, startRequest } from "@/lib/ai-log";
 
 export const maxDuration = 45;
 
@@ -10,6 +11,18 @@ const DEV = process.env.NODE_ENV !== "production";
 type Template = { id: string; name: string; box_count: number };
 type Idea = { templateId: string; boxes: string[] };
 type Meme = { url: string; templateId: string };
+
+const SCHEMA: Schema = {
+    type: Type.ARRAY,
+    items: {
+        type: Type.OBJECT,
+        properties: {
+            templateId: { type: Type.STRING },
+            boxes: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        required: ["templateId", "boxes"],
+    },
+};
 
 let cache: { at: number; templates: Template[] } | null = null;
 
@@ -41,7 +54,6 @@ async function renderMeme(templateId: string, boxes: string[]) {
     return body.data.url as string;
 }
 
-// Accepts whatever shape the AI sends back and turns it into a clean list of ideas.
 function readIdeas(text: string, byId: Map<string, Template>): Idea[] {
     const cleaned = text.replace(/```(json)?/g, "").trim();
     const parsed: unknown = JSON.parse(cleaned);
@@ -50,31 +62,14 @@ function readIdeas(text: string, byId: Map<string, Template>): Idea[] {
         : parsed && typeof parsed === "object"
             ? (Object.values(parsed).find(Array.isArray) as unknown[] | undefined) ?? []
             : [];
-
     return list
         .map((raw) => {
             const item = raw as { templateId?: unknown; template_id?: unknown; id?: unknown; boxes?: unknown };
             const templateId = String(item.templateId ?? item.template_id ?? item.id ?? "").trim();
-            const boxes = Array.isArray(item.boxes)
-                ? item.boxes.map((b) => String(b ?? "").trim()).filter(Boolean)
-                : [];
+            const boxes = Array.isArray(item.boxes) ? item.boxes.map((b) => String(b ?? "").trim()).filter(Boolean) : [];
             return { templateId, boxes };
         })
         .filter((idea) => byId.has(idea.templateId) && idea.boxes.length > 0);
-}
-
-async function askForIdeas(prompt: string) {
-    return generateJsonText(prompt, {
-        type: Type.ARRAY,
-        items: {
-            type: Type.OBJECT,
-            properties: {
-                templateId: { type: Type.STRING },
-                boxes: { type: Type.ARRAY, items: { type: Type.STRING } },
-            },
-            required: ["templateId", "boxes"],
-        },
-    });
 }
 
 export async function POST(request: Request) {
@@ -95,6 +90,17 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Tell us what's happening first." }, { status: 400 });
     }
 
+    const config = await loadAiConfig(supabase, "daily-meme");
+    if (!config.enabled) {
+        return NextResponse.json({ error: "The meme maker is paused by an admin right now. Try again later." }, { status: 503 });
+    }
+
+    const startedAt = Date.now();
+    const requestId = await startRequest(supabase, user.id, "daily-meme", {
+        songTitle,
+        songArtist,
+        moment: cleanMoment,
+    });
     let lastError: unknown = null;
 
     try {
@@ -102,19 +108,38 @@ export async function POST(request: Request) {
         const byId = new Map(templates.map((t) => [t.id, t]));
         const list = templates.map((t) => `${t.id} | ${t.name} | ${t.box_count} boxes`).join("\n");
 
+        const termsText = config.terms.length
+            ? `Campus slang you can use if it fits: ${config.terms.map((t) => `${t.term} (${t.meaning})`).join("; ")}.`
+            : "";
+        const examplesText = config.examples.length
+            ? [
+                "Examples of great memes from this app:",
+                ...config.examples.map(
+                    (e) => `- Song "${e.song}", moment "${e.moment}"${e.template_name ? `, template ${e.template_name}` : ""}: ${e.meme_text}`
+                ),
+            ].join("\n")
+            : "";
+
         const aiPrompt = [
             "You make memes for a daily music check-in app for Columbia University students in New York City.",
             `The student is listening to "${songTitle.slice(0, 200)}" by ${songArtist.slice(0, 200)}.`,
             `What they're doing right now: "${cleanMoment}".`,
+            termsText,
+            examplesText,
             "Make THREE different funny memes about this moment, each using a DIFFERENT template from this list (id | name | number of text boxes):",
             list,
             "For each meme, copy the template id exactly as written, and write exactly as many text boxes as the template has, in the order that template is normally captioned. Keep each box short (under 12 words). Be playful and clever, never mean.",
-        ].join("\n");
+        ]
+            .filter(Boolean)
+            .join("\n");
 
-        // Try twice before giving up.
         for (let attempt = 1; attempt <= 2; attempt++) {
             try {
-                const text = await askForIdeas(aiPrompt);
+                const { text } = await generateJsonText(aiPrompt, {
+                    schema: SCHEMA,
+                    models: config.models,
+                    onAttempt: (a) => logResponse(supabase, requestId, a),
+                });
                 const ideas = readIdeas(text, byId).slice(0, 3);
                 if (!ideas.length) throw new Error(`AI reply had no usable memes: ${text.slice(0, 300)}`);
 
@@ -129,7 +154,10 @@ export async function POST(request: Request) {
                     (r): r is PromiseRejectedResult => r.status === "rejected" && r.reason instanceof ImgflipError
                 );
 
-                if (memes.length) return NextResponse.json({ memes, aiPrompt });
+                if (memes.length) {
+                    await finishRequest(supabase, requestId, startedAt, "succeeded");
+                    return NextResponse.json({ memes, aiPrompt });
+                }
                 if (imgflipFailure) throw imgflipFailure.reason;
                 throw new Error("Every meme failed to render");
             } catch (e) {
@@ -146,6 +174,7 @@ export async function POST(request: Request) {
     }
 
     const message = String(lastError);
+    await finishRequest(supabase, requestId, startedAt, "failed", message.slice(0, 500));
     const detail = DEV ? { detail: message.slice(0, 500) } : {};
 
     if (message.includes("429") || message.includes("RESOURCE_EXHAUSTED")) {
