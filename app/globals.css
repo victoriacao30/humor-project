@@ -595,4 +595,27 @@ body {
   border-bottom: 3px solid var(--ink);
 }
 
+/* Vote page fixes */
+.versus {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+}
+.versus > * { order: 3; min-width: 0; }
+.versus > :first-child { order: 1; }
+.versus > .vs-badge { order: 2; align-self: center; }
+
+.vs-card .post-song .btn { width: auto; flex: 1; min-width: 0; }
+@media (max-width: 700px) {
+  .versus { grid-template-columns: 1fr; }
+}
+
+/* Same-size memes so both cards line up */
+.vs-card .post-meme {
+  aspect-ratio: 1;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
+}
+.vs-card { height: 100%; }
+.vs-card > :last-child { margin-top: auto; }
 
