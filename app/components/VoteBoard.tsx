@@ -36,6 +36,7 @@ export default function VoteBoard({ groupId }: { groupId?: number }) {
     const [error, setError] = useState("");
     const notYet = Date.now() < dropAt;
     const backHref = groupId ? `/groups/${groupId}` : "/vote";
+    const leaderboardHref = groupId ? `/groups/${groupId}` : "/";
 
     const pickPair = useCallback((list: Entry[], seenPairs: Set<string>) => {
         const options: [Entry, Entry][] = [];
@@ -158,7 +159,7 @@ export default function VoteBoard({ groupId }: { groupId?: number }) {
             ) : !pair ? (
                 <div className="form">
                     <p className="label">You judged every matchup today ★</p>
-                    <Link href={backHref} className="btn btn-primary">See the leaderboard →</Link>
+                    <Link href={leaderboardHref} className="btn btn-primary">See the leaderboard →</Link>
                 </div>
             ) : (
                 <>
